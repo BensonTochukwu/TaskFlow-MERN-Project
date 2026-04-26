@@ -6,7 +6,7 @@ const bcrypt = require('bcryptjs');
 const cookieOptions = {
   httpOnly: true,
   secure: process.env.NODE_ENV === "production",
-  sameSite: process.env.NODE_ENV === "production" ? "None" : "Lax",
+  sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
   maxAge: 2 * 24 * 60 * 60 * 1000
 };
 
@@ -47,11 +47,17 @@ const register = async (req, res) => {
     password: hashedPwd,
   });
 
-  res.status(StatusCodes.CREATED).json({
-    username: newUser.username,
-    email: newUser.email,
-    message: "User registered successfully",
-  });
+  const token = await newUser.jwtCreate();
+
+  newUser.accessToken = token;
+  await newUser.save();
+
+  const userInfo = await User.findById(newUser._id).select("-password -accessToken");
+
+  res
+    .status(StatusCodes.CREATED)
+    .cookie("auth_token", token, cookieOptions)
+    .json(userInfo);
 };
 
 const login = async (req, res) => {
