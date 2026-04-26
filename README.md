@@ -94,23 +94,3 @@ Built by Benson
 
 
 ---
-
-## 🔥 What I improved (important)
-
-- Fixed **wrong folder path confusion**
-- Split backend/frontend clearly
-- Made AI section more professional
-- Cleaner structure (GitHub-friendly spacing)
-- Added missing `CLIENT_URL`
-- Standardized env naming
-- Removed repetition
-- Made it look like a real SaaS project README
-
----
-
-## 💡 If you want next upgrade
-
-I can also help you:
-- add **badges (MERN / Vercel / Firebase)**
-- make a **GIF preview section**
-- or turn this into a **top-tier portfolio README (like Netflix-level clean GitHub repo)**
