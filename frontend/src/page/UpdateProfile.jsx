@@ -1,9 +1,7 @@
 import { useEffect, useRef, useState } from "react"
 import { useDispatch, useSelector } from "react-redux"
 import { useNavigate, useParams } from "react-router-dom"
-import { getDownloadURL, getStorage, ref, uploadBytesResumable } from "firebase/storage"
 import { User, Mail, Lock, Eye, EyeOff, Save, Loader2, Upload, AlertCircle, CheckCircle2 } from "lucide-react"
-import { app } from "@/firebase"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -30,10 +28,16 @@ const UpdateProfile = () => {
   const dispatch = useDispatch()
   const navigate = useNavigate()
 
-  if (!currentUser) {
-    navigate("/")
-    return null
-  }
+  // ✅ FIX: navigation moved to useEffect
+  useEffect(() => {
+    if (!currentUser) {
+      navigate("/")
+    }
+  }, [currentUser, navigate])
+
+  if (!currentUser) return null
+
+  // ---------------- IMAGE HANDLING ----------------
 
   const handleImageFile = (e) => {
     const file = e.target.files[0]
@@ -43,43 +47,43 @@ const UpdateProfile = () => {
     }
   }
 
-  const uploadImage = async () => {
-    const storage = getStorage(app)
-    const filename = new Date().getTime() + imageFile.name
-    const storageRef = ref(storage, filename)
-    const uploadTask = uploadBytesResumable(storageRef, imageFile)
+  const uploadImage = async (file) => {
+    try {
+      setImageFileUploading(true)
+      setUploadError(null)
 
-    setImageFileUploading(true)
-    setUploadError(null)
+      const formData = new FormData()
+      formData.append("image", file)
 
-    uploadTask.on(
-      "state_changed",
-      (snapshot) => {
-        const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100
-        setImageUploadProgress(progress.toFixed(0))
-      },
-      (error) => {
-        setUploadError("Image could not upload (Image must be less than 5 MB)")
-        setImageUploadProgress(null)
-        setImageUrl(null)
-        setImageFileUploading(false)
-      },
-      () => {
-        getDownloadURL(uploadTask.snapshot.ref).then((downloadUrl) => {
-          setImageUrl(downloadUrl)
-          setUpdateUser({ ...updateUser, profilePicture: downloadUrl })
-          setImageUploadProgress(null)
-          setImageFileUploading(false)
-        })
-      }
-    )
+      const res = await api.post("/api/v1/user/upload-avatar", formData, {
+        headers: {
+          "Content-Type": "multipart/form-data",
+        },
+      })
+
+      const imageUrl = res.data.url
+
+      setImageUrl(imageUrl)
+
+      setUpdateUser((prev) => ({
+        ...prev,
+        profilePicture: imageUrl,
+      }))
+
+      setImageFileUploading(false)
+    } catch (error) {
+      setUploadError("Image upload failed")
+      setImageFileUploading(false)
+    }
   }
 
   useEffect(() => {
     if (imageFile) {
-      uploadImage()
+      uploadImage(imageFile)
     }
   }, [imageFile])
+
+  // ---------------- FORM HANDLERS ----------------
 
   const handleOnChange = (e) => {
     setUpdateUser({ ...updateUser, [e.target.id]: e.target.value })
@@ -88,10 +92,12 @@ const UpdateProfile = () => {
   const handleUpdateUser = async () => {
     setUpdateUserError(null)
     setUpdateUserSuccess(null)
+
     if (Object.keys(updateUser).length === 0) {
       setUpdateUserError("No changes made.")
       return
     }
+
     if (imageFileUploading) {
       setUpdateUserError("Please wait for image to upload")
       return
@@ -99,25 +105,43 @@ const UpdateProfile = () => {
 
     try {
       dispatch(updateStart())
-      const { data } = await api.patch(`api/v1/user/update-profile/${uid}`, updateUser)
+
+      // ✅ FIX: proper API path
+      const { data } = await api.patch(
+        `/api/v1/user/update-profile/${uid}`,
+        updateUser
+      )
+
       dispatch(updateSuccess(data))
       setUpdateUserSuccess("Profile updated successfully!")
     } catch (error) {
-      dispatch(updateFailure(error?.response?.data?.msg))
-      setUpdateUserError(error.response?.data?.msg)
+      const msg = error?.response?.data?.msg || "Something went wrong"
+      dispatch(updateFailure(msg))
+      setUpdateUserError(msg)
     }
   }
 
-  setTimeout(() => {
-    setUpdateUserSuccess(null)
-    setUpdateUserError(null)
-  }, 6200)
+  // ---------------- AUTO CLEAR ALERTS ----------------
+
+  useEffect(() => {
+    if (!updateUserSuccess && !updateUserError) return
+
+    const timer = setTimeout(() => {
+      setUpdateUserSuccess(null)
+      setUpdateUserError(null)
+    }, 4000)
+
+    return () => clearTimeout(timer)
+  }, [updateUserSuccess, updateUserError])
+
+  // ---------------- UI ----------------
 
   return (
     <div className="flex flex-col lg:flex-row min-h-[calc(100vh-4rem)]">
       <SideBar />
 
       <div className="flex-1 p-6">
+
         {/* Alerts */}
         {uploadError && (
           <div className="mb-6 flex items-center gap-2 rounded-lg border border-destructive/50 bg-destructive/10 p-4 text-destructive">
@@ -145,33 +169,30 @@ const UpdateProfile = () => {
             <CardTitle>Update Profile</CardTitle>
             <CardDescription>Make changes to your profile here</CardDescription>
           </CardHeader>
+
           <CardContent className="space-y-6">
-            {/* Profile Picture */}
+
+            {/* Avatar */}
             <div className="flex flex-col items-center space-y-4">
               <div className="relative">
                 <Avatar
                   className="h-24 w-24 cursor-pointer border-4 border-background shadow-lg"
                   onClick={() => fileRef.current.click()}
                 >
-                  <AvatarImage
-                    src={imageUrl || currentUser?.profilePicture}
-                    alt={currentUser?.username}
-                    className={imageUploadProgress && imageUploadProgress < 100 ? "opacity-50" : ""}
-                  />
-                  <AvatarFallback className="text-2xl bg-primary text-primary-foreground">
+                  <AvatarImage src={imageUrl || currentUser?.profilePicture} />
+                  <AvatarFallback>
                     {currentUser?.username?.charAt(0).toUpperCase()}
                   </AvatarFallback>
                 </Avatar>
-                {imageUploadProgress && imageUploadProgress < 100 && (
-                  <div className="absolute inset-0 flex items-center justify-center">
-                    <div className="text-sm font-medium">{imageUploadProgress}%</div>
-                  </div>
-                )}
-                <div className="absolute -bottom-2 -right-2 rounded-full bg-primary p-2 cursor-pointer"
-                  onClick={() => fileRef.current.click()}>
-                  <Upload className="h-4 w-4 text-primary-foreground" />
+
+                <div
+                  className="absolute -bottom-2 -right-2 bg-primary p-2 rounded-full cursor-pointer"
+                  onClick={() => fileRef.current.click()}
+                >
+                  <Upload className="h-4 w-4 text-white" />
                 </div>
               </div>
+
               <input
                 type="file"
                 ref={fileRef}
@@ -179,61 +200,30 @@ const UpdateProfile = () => {
                 className="hidden"
                 accept="image/*"
               />
-              <p className="text-sm text-muted-foreground">Click to upload a new photo</p>
             </div>
 
-            {/* Form Fields */}
+            {/* Inputs */}
             <div className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="username">Username</Label>
-                <div className="relative">
-                  <User className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                  <Input
-                    id="username"
-                    type="text"
-                    placeholder="Change username"
-                    defaultValue={currentUser?.username}
-                    onChange={handleOnChange}
-                    className="pl-9"
-                  />
-                </div>
+
+              <div>
+                <Label>Username</Label>
+                <Input id="username" defaultValue={currentUser.username} onChange={handleOnChange} />
               </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="email">Email</Label>
-                <div className="relative">
-                  <Mail className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                  <Input
-                    id="email"
-                    type="email"
-                    placeholder="Change email"
-                    defaultValue={currentUser?.email}
-                    onChange={handleOnChange}
-                    className="pl-9"
-                  />
-                </div>
+              <div>
+                <Label>Email</Label>
+                <Input id="email" defaultValue={currentUser.email} onChange={handleOnChange} />
               </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="password">New Password</Label>
-                <div className="relative">
-                  <Lock className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                  <Input
-                    id="password"
-                    type={showPassword ? "text" : "password"}
-                    placeholder="Enter new password"
-                    onChange={handleOnChange}
-                    className="pl-9 pr-9"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3 top-3 text-muted-foreground hover:text-foreground"
-                  >
-                    {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                  </button>
-                </div>
+              <div>
+                <Label>Password</Label>
+                <Input
+                  id="password"
+                  type={showPassword ? "text" : "password"}
+                  onChange={handleOnChange}
+                />
               </div>
+
             </div>
 
             <Button
@@ -241,10 +231,10 @@ const UpdateProfile = () => {
               className="w-full"
               disabled={loading || imageFileUploading}
             >
-              {(loading || imageFileUploading) ? (
+              {loading || imageFileUploading ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  {imageFileUploading ? "Uploading..." : "Saving..."}
+                  Saving...
                 </>
               ) : (
                 <>
@@ -253,6 +243,7 @@ const UpdateProfile = () => {
                 </>
               )}
             </Button>
+
           </CardContent>
         </Card>
       </div>

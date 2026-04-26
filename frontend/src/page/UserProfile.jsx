@@ -67,13 +67,6 @@ const UserProfile = () => {
       <SideBar />
 
       <div className="flex-1">
-        {error && (
-          <div className="m-6 flex items-center gap-2 rounded-lg border border-destructive/50 bg-destructive/10 p-4 text-destructive">
-            <AlertCircle className="h-5 w-5" />
-            <p className="text-sm font-medium">{error}</p>
-          </div>
-        )}
-
         {/* Profile Hero Section */}
         <div className="relative">
           {/* Cover Image */}
