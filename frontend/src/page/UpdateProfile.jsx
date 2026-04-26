@@ -14,7 +14,6 @@ import SideBar from "@/components/Sidebar"
 const UpdateProfile = () => {
   const [imageFile, setImageFile] = useState(null)
   const [imageUrl, setImageUrl] = useState(null)
-  const [imageUploadProgress, setImageUploadProgress] = useState(null)
   const [uploadError, setUploadError] = useState(null)
   const [imageFileUploading, setImageFileUploading] = useState(false)
   const [updateUserSuccess, setUpdateUserSuccess] = useState(null)
@@ -212,7 +211,7 @@ const UpdateProfile = () => {
 
               <div>
                 <Label>Email</Label>
-                <Input id="email" defaultValue={currentUser.email} onChange={handleOnChange} />
+                <Input value={currentUser.email} readOnly disabled />
               </div>
 
               <div>
