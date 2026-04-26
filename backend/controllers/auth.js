@@ -11,36 +11,46 @@ const cookieOptions = {
 };
 
 const register = async (req, res) => {
-  console.log(req.body);
-  const users = await User.find();
-console.log(users);
-
   const { username, password, email } = req.body;
 
   if (!username || !password || !email) {
     throw new BadRequest("Username, Email, and Password must be provided!");
   }
 
-  const existingEmail = await User.findOne({ email });
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  if (!emailRegex.test(email)) {
+    throw new BadRequest("Invalid email format");
+  }
+
+  if (password.length < 6) {
+    throw new BadRequest("Password must be at least 6 characters long");
+  }
+
+  const [existingEmail, existingUsername] = await Promise.all([
+    User.findOne({ email }),
+    User.findOne({ username }),
+  ]);
+
   if (existingEmail) {
     throw new BadRequest("Email already exists");
   }
 
-  const existingUsername = await User.findOne({ username });
   if (existingUsername) {
     throw new BadRequest("Username already exists");
   }
 
   const hashedPwd = await bcrypt.hash(password, 10);
 
-  const register_user = await User.create({
+  const newUser = await User.create({
     username,
     email,
-    password: hashedPwd
+    password: hashedPwd,
   });
 
   res.status(StatusCodes.CREATED).json({
-    username: register_user.username
+    username: newUser.username,
+    email: newUser.email,
+    message: "User registered successfully",
   });
 };
 
