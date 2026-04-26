@@ -47,6 +47,7 @@ const AuthModal = ({ open, onOpenChange }) => {
     try {
       const response = await api.post("/api/v1/auth/login", formData)
       if (response.status === 200) {
+        localStorage.setItem("token", response.data.token) // 👈 add this
         dispatch(loginSuccess(response?.data))
         setSuccessMessage(`Welcome back, ${response?.data?.username}!`)
         setTimeout(() => {
@@ -67,6 +68,7 @@ const AuthModal = ({ open, onOpenChange }) => {
     dispatch(start())
     try {
       const response = await api.post("/api/v1/auth/register", formData)
+      localStorage.setItem("token", response.data.token) // 👈 add this
       dispatch(signupSuccess())
       setSuccessMessage(`Account created! Welcome, ${response?.data?.username}!`)
       setTimeout(() => {
@@ -96,6 +98,7 @@ const AuthModal = ({ open, onOpenChange }) => {
       }
       const res = await api.post("/api/v1/auth/googleAuth", newUser)
       if (res.status === 200) {
+        localStorage.setItem("token", res.data.token) // 👈 add this
         dispatch(loginSuccess(res?.data))
         setSuccessMessage(`Welcome, ${res?.data?.username}!`)
         setTimeout(() => {

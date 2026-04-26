@@ -85,14 +85,22 @@ const UpdateProfile = () => {
   // ---------------- FORM HANDLERS ----------------
 
   const handleOnChange = (e) => {
-    setUpdateUser({ ...updateUser, [e.target.id]: e.target.value })
+    setUpdateUser((prev) => ({
+      ...prev,
+      [e.target.id]: e.target.value,
+    }))
   }
 
   const handleUpdateUser = async () => {
     setUpdateUserError(null)
     setUpdateUserSuccess(null)
 
-    if (Object.keys(updateUser).length === 0) {
+    const hasChanges =
+      updateUser.username ||
+      updateUser.password ||
+      updateUser.profilePicture
+
+    if (!hasChanges) {
       setUpdateUserError("No changes made.")
       return
     }
@@ -114,7 +122,10 @@ const UpdateProfile = () => {
       dispatch(updateSuccess(data))
       setUpdateUserSuccess("Profile updated successfully!")
     } catch (error) {
-      const msg = error?.response?.data?.msg || "Something went wrong"
+      const msg =
+        error?.response?.data?.message ||
+        error?.response?.data?.msg ||
+        "Something went wrong"
       dispatch(updateFailure(msg))
       setUpdateUserError(msg)
     }
@@ -206,7 +217,7 @@ const UpdateProfile = () => {
 
               <div>
                 <Label>Username</Label>
-                <Input id="username" defaultValue={currentUser.username} onChange={handleOnChange} />
+                <Input id="username" value={updateUser.username ?? currentUser.username} onChange={handleOnChange} />
               </div>
 
               <div>

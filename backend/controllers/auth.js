@@ -3,13 +3,6 @@ const User = require('../models/Users');
 const { StatusCodes } = require('http-status-codes');
 const bcrypt = require('bcryptjs');
 
-const cookieOptions = {
-  httpOnly: true,
-  secure: process.env.NODE_ENV === "production",
-  sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
-  maxAge: 2 * 24 * 60 * 60 * 1000
-};
-
 const register = async (req, res) => {
   const { username, password, email } = req.body;
 
@@ -56,8 +49,7 @@ const register = async (req, res) => {
 
   res
     .status(StatusCodes.CREATED)
-    .cookie("auth_token", token, cookieOptions)
-    .json(userInfo);
+    .json({ ...userInfo.toObject(), token }); // 👈 token added here
 };
 
 const login = async (req, res) => {
@@ -88,8 +80,7 @@ const login = async (req, res) => {
 
   res
     .status(StatusCodes.OK)
-    .cookie('auth_token', token, cookieOptions)
-    .json(userInfo);
+    .json({ ...userInfo.toObject(), token }); // 👈 token added here
 };
 
 const googleAuth = async (req, res) => {
@@ -123,14 +114,13 @@ const googleAuth = async (req, res) => {
 
   res
     .status(StatusCodes.OK)
-    .cookie('auth_token', token, cookieOptions)
-    .json(userInfo);
+    .json({ ...userInfo.toObject(), token }); // 👈 token added here
 };
 
 const logout = async (req, res) => {
+  // No cookie to clear anymore — frontend handles logout by removing token from localStorage
   res
     .status(StatusCodes.OK)
-    .clearCookie('auth_token', cookieOptions)
     .json({ msg: "You are successfully logged out" });
 };
 

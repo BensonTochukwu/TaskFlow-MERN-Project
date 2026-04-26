@@ -43,6 +43,7 @@ const UserProfile = () => {
   const handleLogout = async () => {
     try {
       await api.post("/api/v1/auth/logout")
+      localStorage.removeItem("token") // 👈 add this
       dispatch(logoutSuccess())
       navigate("/")
     } catch (error) {
