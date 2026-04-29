@@ -19,9 +19,14 @@ const Footer = () => {
           </Link>
 
           {/* Center - Tagline */}
-          <p className="text-sm text-muted-foreground flex items-center gap-1.5">
-            Built with <Heart className="h-3.5 w-3.5 text-red-500 fill-red-500" /> for productivity
-          </p>
+          <a
+            href="https://bensons-portfolio.vercel.app/"
+            target="_blank"
+            rel="noreferrer"
+            className="dev-link text-sm text-muted-foreground hover:text-foreground transition-colors"
+          >
+            Developed by &lt;/&gt;
+          </a>
 
           {/* Copyright */}
           <p className="text-sm text-muted-foreground">
